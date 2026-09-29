@@ -1,0 +1,107 @@
+# 第二问最终模型口径（锁定版）
+# 本文件固化第二问最终采用的数学模型口径，作为正式交付的单一事实来源。
+# 任何代码/报告与本文矛盾处，一律以本文为准。不得再改动。
+#
+# 预测档位：主档 = 式(17a~17c) 分解预测 + 3 日光伏回望（见下方 forecast 段）；
+#           消融对照档 = 全程同星期均值 + 7 日光伏回望，可由 Q2_PREDICTOR=naive 重现。
+
+time:
+  delta_hours: 0.16666666666666666   # Δt = 1/6 小时
+  periods_per_day: 144               # 每天 144 个 10 分钟时段
+  interval_minutes: 10
+  timestamp_interpretation: "区间终点（标签表示该10分钟区间的结束时刻）"
+  label_examples:
+    "0:10": "[0:00, 0:10)"
+    "10:10": "[10:00, 10:10)"
+    "0:00+1": "[23:50, 24:00)"
+
+period:
+  warmup_start: "2025-01-01"
+  warmup_end: "2025-01-31"
+  warmup_days: 31
+  score_start: "2025-02-01"
+  score_end: "2025-12-31"
+  score_days: 334
+
+forecast:
+  # 主档（正式交付）= 式(17a~17c) 分解预测 + 3 日光伏回望。
+  # 开关位于 代码/04_构建情景库.py：
+  #   Q2_PREDICTOR  ∈ {decomp（默认）, naive}；Q2_PV_WINDOW 覆盖光伏回望天数。
+  predictor_default: "decomp"           # PDF 式(17a~17c) 分解预测
+  load:
+    rule: "式(17a~17c) 分解：日电量水平 × 日内形状，L̂_{d,t} = B̂_d · ŝ_{d,t}"
+    day_type:
+      classify_window: "2025-01-01 … 2025-01-14（14 天）"
+      rule: "按 1/1—1/14 平均日电量识别 2 个低负载星期；本数据识别为 周五、周六"
+      lock_from: "2025-01-15 起固定分类"
+      k_low: 0
+      k_high: 1
+    shape:
+      formula: "ŝ_{d,t} = Σ_{i∈I_d} L_{i,t} / Σ_{i∈I_d} B_i"
+      window: "最近 3 个同类型历史日（SHAPE_DAYS=3）"
+    daily_energy:
+      formula: "B̂_d = B_{d-1} · exp[β_d (k_d - k_{d-1})]"
+      beta_formula: "β_d = med_{i∈J_d} ln(B_i / B_{i-1}) / (k_i - k_{i-1})"
+      beta_window: "此前 35 天内的类型切换日（BETA_WINDOW_DAYS=35）"
+    warmup_rule: "1/1—1/14 日类型未锁定，改用同星期同期均值；同星期样本<2 天回退此前最多 7 天同期均值"
+    fallback: "同类型历史日不足时回退同星期均值（同上）"
+    naive_rule: "Q2_PREDICTOR=naive 时全程用同星期均值（lookback 35 天 / fallback 7 天 / 最少 2 个同星期样本）——仅用于消融对照"
+    lookback_days: 35
+    fallback_days: 7
+    min_same_week_samples: 2
+  pv:
+    rule: "此前最多 3 天同期均值（主档）"
+    lookback_days: 3
+    math_formula: "m_d = min(3, d-1)"           # 日期序号 D=1..365（1 基）
+    python_index_formula: "m = min(3, d_idx)"     # 数组索引 d_idx=0..364（0 基）
+    note: "二者严格等价：d_idx = D - 1；可用 Q2_PV_WINDOW=7 复现 7 日对照档"
+    selection_rule: "3 日由总费用择优（3 日 1357.06 万元 < 7 日 1359.12 万元）"
+  causality: "所有预测只使用当天 0:00 以前的数据（无前视）"
+
+scenario:
+  residual_window_days: 30
+  m_scenarios: 30                        # 30 个等权情景
+  pairing: "负载残差与光伏残差按同一个历史日配对"
+  weight: "等权 1/M"
+  nonneg_truncation_only: true           # 只做非负截断
+  pv_historical_max_truncation: false    # 不使用历史 PV 最大值额外截断
+
+day_ahead:
+  model: "两阶段情景 LP（图片式(20)-(23)）"
+  first_stage: "共享计划 g_t（0:00 一次性申报）"
+  second_stage: "情景相关变量 b/C/U/D/E"
+  nu_yuan_per_kwh: 0.48154814814814817   # ν = 附件1前30时段电价均值 ÷ η
+
+execution:
+  final_scheme: "各自重订计划 + DP 价值执行器"
+
+cross_day_state:
+  day_ahead_init: "每天日前 LP 的初始库存 = 该执行器当天真实日初库存"
+  transfer: "实际日末库存成为次日真实日初库存"
+
+battery:
+  min_energy_kwh: 1200.0
+  max_energy_kwh: 10800.0
+  initial_energy_kwh: 6000.0
+  max_power_kw: 5000.0
+  s_period_kwh: 833.3333333333334         # S = 5000/6 kWh/时段
+  eta_c: 0.9
+  eta_d: 0.9
+
+cost:
+  plan: "计划购电量按 c_t 全额收费"
+  emergency: "紧急购电量按 5c_t 收费"
+  nu_in_billing: false                    # νE_T 仅为规划中的库存价值近似，不进入实际账单
+
+operation_limits:
+  grid_export_allowed: false              # 禁止向外部电网售电
+  pv_curtailment_allowed: true            # 允许未利用供能
+  emergency_charging_storage: false       # 实际执行不允许用紧急购电主动给储能充电
+  causal_action: "动作只使用当前及此前实际观测"
+
+dp:
+  formal_grid_kwh: 6.0                    # 正式程序采用 δ=6 kWh 网格近似
+  convergence_grids_kwh: [3.0, 1.5]       # 仅用于收敛验证
+  flat_interval_rule: "平坦最优区间取最大端点"
+  exact_continuous_claim: false           # 不得称为精确连续 DP
+  proposition_3_1: "只保留凸分段线性、边际价值、边际价值随库存单调不增结论，简化高级证明"

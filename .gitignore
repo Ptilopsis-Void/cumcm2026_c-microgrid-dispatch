@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments and local settings
+.venv/
+venv/
+env/
+.env
+.env.*
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Generated intermediate files
+*.npz
+*.npy
+**/处理后数据/
+**/日志/
+**/求解日志/
+**/内部诊断/
+**/_骨架自检/
+**/_快照_第三题代码/
+
+# Official problem attachments are obtained separately
+CUMCM2026Problems/C题/附件/*.xlsx
+CUMCM2026Problems/C题/附件/附件5/*.xlsx

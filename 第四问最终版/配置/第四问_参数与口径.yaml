@@ -1,0 +1,37 @@
+# 第四问 参数与口径锁文件（机器可读说明；脚本按 _comm4.CONFIG 取默认值）
+# 本文件是「人读 + 文档」格式（本项目无 pyyaml，脚本不解析它）。
+# 依《第四问详细流程图.md》§3.2 冻结；改动须在同一处登记修订记录。
+
+# ---- 数据来源 ----
+source_mode: real                      # real：结果全部来自本地真实附件数据
+
+# ---- 价格信息与结算 ----
+price_information: revealed_at_delivery_slot   # 当期时段价格当期可知，未来价格未知
+settlement: B_final_relative_to_midnight_plan  # 相对 0 时原始计划，只对交付时最终有效量结算一次
+stage0_mode_43: plan                   # 4-3 默认沿用保守日前计划（0 时不内生未来采购调整）
+
+# ---- 价格预测 ----
+price_history_days: 35                 # 日水平/日内形状的回望窗口（已结束日）
+scenario_max_count: 30                 # 情景数上限；不足则减少并登记实际数量
+price_method_42: net_load_regression   # 4-2 主档：截距 + 净负荷系数（rho_c = 0）
+price_method_43: ar1                   # 4-3 主档：AR(1)（b_c = 0）
+ar_rho_bounds: [0.0, 0.99]             # 自回归系数截断
+price_level_floor: 0.01                # 日均预测下限（元/kWh）
+price_point_floor: 0.0001              # 逐点预测下限（元/kWh）
+
+# ---- 更新与展望 ----
+purchase_update_hours_42: []           # 4-2 不修改当日普通购电量（全天 a = g）
+purchase_update_hours_43: [6, 12, 18]  # 4-3 允许在这些节点修改尚未执行的 a
+value_update_hours: [0, 6, 12, 18]     # 两分支都在四个节点用新信息重建未来价值
+lookahead_hours: 24                    # 节点展望视界（小时）
+tail_model: scenario_recourse_approximation  # 尾段购电只作续存价值估计，不申报次日
+
+# ---- 数值 ----
+soc_grid_kwh: 6                        # DP 内部电量网格步长
+random_seed: 20260912
+
+# ---- 热启动 ----
+warmup_policy: common_causal_policy    # 1 月公共简单策略，形成共同初值；费用不计入评分期
+
+# ---- 修订记录 ----
+# 2026-09-12 建立；参数取自流程图 §3.2 的可执行起点，未在本项目第四问验证最优。

@@ -1,0 +1,21 @@
+﻿standard_field,source,unit,description,usage
+interval_index,（派生）,（无）,时段编号 1..144,模型正式输入
+original_time_label,时间,（无）,10分钟区间终点标签（溯源用）,模型正式输入
+interval_start,（派生）,（无）,区间起点 HH:MM,模型正式输入
+interval_end,（派生）,（无）,区间终点 HH:MM,模型正式输入
+delta_hours,（常量）,小时,每时段时长 Δt = 1/6,模型正式输入
+price_yuan_per_kwh,电价,元/kWh,交易电价（模型参数 p_t）,模型正式输入
+load_kw,小区负载,kW,居民负荷功率（模型参数 L_t）,模型正式输入
+pv_forecast_kw,光伏发电预测功率,kW,光伏预测出力（模型参数 P_t^pv）,模型正式输入
+net_load_kw,（派生）,kW,load_kw - pv_forecast_kw,描述性统计
+net_demand_kw,（派生）,kW,"max(net_load_kw, 0)",描述性统计
+pv_surplus_kw,（派生）,kW,"max(-net_load_kw, 0)，静态差值，非弃光 W_t",描述性统计
+load_energy_kwh,（派生）,kWh,load_kw × Δt,描述性统计
+pv_forecast_energy_kwh,（派生）,kWh,pv_forecast_kw × Δt,描述性统计
+net_demand_energy_kwh,（派生）,kWh,net_demand_kw × Δt,描述性统计
+pv_surplus_energy_kwh,（派生）,kWh,pv_surplus_kw × Δt,描述性统计
+g_t,决策变量,kWh,外网计划购电量（由优化模型求解）,后续模型输出
+C_t,决策变量,kWh,交流侧充电量（由优化模型求解）,后续模型输出
+D_t,决策变量,kWh,交流侧放电量（由优化模型求解）,后续模型输出
+E_t,决策变量,kWh,储能电量（由优化模型求解）,后续模型输出
+U_t,决策变量,kWh,未利用供能（由优化模型求解，非 pv_surplus_kw）,后续模型输出

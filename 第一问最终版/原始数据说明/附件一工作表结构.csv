@@ -1,0 +1,10 @@
+﻿field,value
+worksheet_name,Sheet1
+total_rows_with_header,145
+data_rows,144
+total_cols,4
+column_1,时间
+column_2,电价
+column_3,小区负载
+column_4,光伏发电预测功率
+time_label_cell_type_dist,"{'time': 60, 'str': 84}"

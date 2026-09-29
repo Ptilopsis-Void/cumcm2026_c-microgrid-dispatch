@@ -1,0 +1,124 @@
+# 第三问最终版 参数与口径开关
+# ---------------------------------------------------------------
+# 用法：脚本 `--config 配置/第三题_参数与口径.yaml` 读取；未指定时用 default。
+# 所有取值都必须与 `第三问最终版/README.md` §7 的 A-15…A-31 逐条对应。
+# 修改任何 default 之前，请先在 README §7 里登记理由（可追溯）。
+# ---------------------------------------------------------------
+
+meta:
+  problem: 3
+  version: "v1"
+  frozen_at: "口径已核验、思路冻结"
+  spec: "第三问最终版/README.md"
+
+# ============ 1. 时间与单位（与第一/二问一致，不要改）============
+time:
+  intervals_per_day: 144          # 10 min 时段
+  dt_hours: 0.16666666666666666   # Δt = 1/6 h
+  label_semantics: interval_end   # 标签 = 区间终点（如 00:10 ↔ [0:00,0:10)）
+  publish_taus_hours: [0, 6, 12, 18]   # 四个发布/决策时刻
+  scoring_start: "2025-02-01"     # 评分期起点（1 月为预热期，A-24）
+  scoring_end: "2025-12-31"
+
+units:
+  decision_variable_unit: kWh_per_interval   # ⚠️ A-1：C/D/q/p/b 全部是每时段电量 kWh
+  s_max_kwh_per_interval: 833.3333333333333  # S = 5000 kW × Δt
+
+# ============ 2. 储能参数（附录 1）============
+battery:
+  eta: 0.9
+  e_min_kwh: 1200.0
+  e_max_kwh: 10800.0
+  e_init_2025_01_01_00_00: 6000.0
+  terminal_value_nu: 0.4815481481481481   # A-23：附件1 前30时段电价均值 / eta，沿用第二问
+  cross_day_continuity: true              # E_{d,0} = E_{d-1,T}，取消日循环
+  january_warmup_hold_kwh: 6000.0         # A-24：1 月不优化、库存恒定
+
+# ============ 3. 附件 3 预报口径（本问第一号口径）============
+attachment3:
+  horizon_hours: 24                       # 覆盖 [tau, tau+24)
+  element_offset_hours: 0                 # A-15：元素 k ↔ 整点区间 [tau+k, tau+k+1)（零位移）
+  night_hours_are_zero: true              # 夜间为 0 是物理事实，非缺失
+  disaggregate: piecewise_constant        # A-20：piecewise_constant（推荐，MAE 171.05 kW）
+                                          #       | linear_interp（MAE 276.02 kW，作敏感档）
+  linear_interp_formula: "P[6k+r] = (1 - r/6)*F[k] + (r/6)*F[k+1], r=0..5"
+
+# ============ 4. 预测与情景库 ============
+forecast:
+  pv_source: attachment3                  # 第三问的光伏预报**只能**来自附件 3
+  load_rule: same_weekday_mean            # 负荷无预报来源，沿用第二问因果规则
+  load_window_days: 35
+  load_fallback_days: 7
+  residual_window_days: 30                # 残差库取此前 30 天
+  residual_strata: [tau, lead_hour]       # ⚠️ 必须按 (tau, lead) 分层（见 README §6.1 剖面）
+  n_scenarios: 30
+  scenario_weights: equal
+  joint_pairing: same_historical_day      # 负荷与光伏残差绑定同一历史日，保留相关结构
+
+# ============ 5. 调整机制（费用口径的核心）============
+adjustment:
+  settlement_basis: single_final          # A-16：single_final（推荐）| incremental_per_update
+  plan_cost_base: min_p_q                 # A-17：min_p_q（推荐）| full_plan_cp
+  down_adjust_ratio: 0.5                  # 下调：违约电价 = 交易时刻电价的 50%
+  up_adjust_ratio: 1.5                    # 上调：超出部分电价 = 交易时刻电价的 150%
+  scope: future_only                      # A-21：只调整 t > k0 的时段，已执行时段冻结
+  freeze_past: true
+  u_v_mutual_exclusion: lp_automatic      # A-27：LP 自动保证 u*v = 0，无需 0-1 变量
+  start_soc_from: realized                # 每轮以真实储电量为起点
+
+adjustment_sheet_content: final_q         # A-18：`调整购电量` 表填最终 q_t（不是增量）
+
+# ============ 6. 滚动与视界 ============
+rolling:
+  stage0_model: two_stage_sp              # 0:00 必须内生化调整成本（两阶段随机规划）
+  tau_model: rolling_sp                   # 6/12/18 只解剩余时段
+  tau_horizon: same_day_only              # A-25：same_day_only（变体A，主结果）
+                                          #       | lookahead_tail（变体B，tau=18 建议启用）
+  lookahead_tail_hours: 18                # 变体 B 的尾段长度（6 或 18）
+  tail_pricing: nested_two_stage          # 尾段用同样的 p/q + 0.5c/1.5c 结构定价
+  execute_until_next_node: true           # 只执行到下一个更新节点
+
+# ============ 7. 阶段内执行器 ============
+executor:
+  enabled: true                           # A-22：复用第二问 DP 价值执行器（36 时段）
+  dp_grid_kwh: 6.0                        # δ 网格，1601 节点，线性插值（第二问 A-12）
+  terminal_value: next_stage_value_fn     # 终端值 = 下一阶段起点价值函数；首轮退化到 -nu*e
+  terminal_iterations: 2                  # 两轮自洽迭代即收敛（见 README §5.7）
+  forbid_emergency_to_charge: true        # 严禁用紧急购电主动充电
+
+# ============ 8. 消融实验（题面末句的直接答案）============
+ablation:
+  enabled: true
+  arms:
+    - S0          # 无调整，q ≡ p
+    - S06         # {6:00}
+    - S0612       # {6:00, 12:00}   ← 预期最优
+    - S061218     # {6:00, 12:00, 18:00}
+    - S_all_plus  # 上述 + 跨日展望尾
+    - PF          # 完美信息下界（用附件 2 实际光伏计划，不可实现）
+  report: [total_cost, plan_fee, adjust_fee_down, adjust_fee_up, emergency_fee, emergency_kwh]
+
+# ============ 9. 求解器 ============
+solver:
+  lp: highs                                # scipy.optimize.linprog(method="highs")
+  allow_cbc: false                         # ⚠️ 禁止用 CBC 出正式解（精度不足）
+  milp: scipy.optimize.milp                # 本问理论上不需要 MILP
+  fd_log: true                             # 求解日志重定向到 fd 级（沿用第二问习惯）
+
+# ============ 10. 交付与校验 ============
+deliverable:
+  template: "CUMCM2026Problems/C题/附件/附件5/result3.xlsx"
+  output: "第三问最终版/提交结果/result3.xlsx"
+  sheets:
+    计划购电量: { rows: 335, cols: 147, fill: p_t_plus_daily_totals }
+    调整购电量: { rows: 335, cols: 147, fill: final_q_t }          # A-18
+    充放电量:   { rows: 2005, cols: 6,  fill: six_4h_blocks }      # A-29：1 + 334*6
+    紧急购电量: { rows: 1003, cols: 3,  fill: three_rows_per_day } # A-29：1 + 334*3，超出合并
+  header_label_shift: 1                    # A-30：表头标签整体晚一格 → 按"列序=时间序"填写
+  readback_checks_min: 17                  # 填完强制回读校验（沿用第二问 10 脚本）
+
+# ============ 11. 明确排除 ============
+excluded:
+  attachment4: true                        # A-28：附件 4（波动电价）属第四问，第三问严禁使用
+  q1_q2_numeric_results: true              # 不复用第一/二问的任何数值结果
+  pv_causal_predictor_from_q2: true        # 第二问的因果光伏预测器不复用（改用附件 3）

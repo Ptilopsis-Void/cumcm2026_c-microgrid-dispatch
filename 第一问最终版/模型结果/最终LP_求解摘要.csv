@@ -1,0 +1,14 @@
+﻿指标,数值,单位
+模型类型,连续线性规划（LP）,-
+求解器,scipy.optimize.linprog(method='highs'),-
+scipy版本,1.17.1,-
+HiGHS版本,1.12.0,-
+求解状态码,0,-
+求解消息,Optimization terminated successfully. (HiGHS Status 7: Optimal),-
+求解成功,True,-
+求解耗时_秒,0.004521,s
+迭代次数,367,次
+最优目标值_元,35126.948589289626,元
+变量数,721,个
+等式约束数,288,条
+等式约束构成,供需平衡144 + 储能递推144,-

@@ -1,0 +1,13 @@
+{
+  "days": 334,
+  "diagnostic_signed_mean": 320.22302367215406,
+  "diagnostic_abs_mean": 320.22302367215457,
+  "co_days": 254,
+  "co_periods": 12171,
+  "balance_residual": 1.1368683772161603e-13,
+  "soc_residual": 9.094947017729282e-13,
+  "main_npz_sha256": "52740e318895dfc54ff25d25e997afd7bb6c04e405cb523e2c855e3ab6a07fb4",
+  "total_cost": 13570562.783975752,
+  "regression_tests": "通过",
+  "main_npz_unchanged": true
+}

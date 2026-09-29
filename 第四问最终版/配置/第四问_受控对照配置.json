@@ -1,0 +1,73 @@
+{
+  "_说明": [
+    "第四问 2x2 受控对照与敏感性实验的预登记配置。",
+    "本文件在查看任何实验结果之前写入并落盘；后续运行只读，不按结果回头修改。",
+    "设计依据：第四问「价格环境 × 调整能力」2x2 因子设计；本文件在运行前落盘。"
+  ],
+  "design_ref": "第四问_受控对照与因果性检验报告.md",
+  "frozen_at": "2026-09-12",
+  "frozen_basis": {
+    "official_bill_42_yuan": 14240625.708156168,
+    "official_bill_43_yuan": 13929637.505149134,
+    "official_diff_yuan": 310988.20300703496,
+    "official_E_start_kwh": 10800.0,
+    "official_horizon": "day_end_truncated",
+    "sha256_result4_2_xlsx": "db5ad9b4f71a63cf859930c2350a463a96fb950651df136bda50e526024cf528",
+    "sha256_result4_3_xlsx": "a89fc7e6068cad140017141ad2ab9b670c61a6cd56a4c9a334f2b32e0609e5c4",
+    "_核对说明": "以上数字由 第四问_{4-2,4-3}全年回测.npz 与 提交结果/*.xlsx 实测核对一致。"
+  },
+  "unified_conditions": {
+    "scenario_source": "附件二因果口径（与 4-2 相同的光伏/负荷链路；build_node_scenarios(branch='42')）",
+    "price_forecaster": "net_load_regression",
+    "_forecaster_rule": "固定使用一个可直接复用的因果预测器（4-2 主档的净负荷回归），不重新调参、不按全年低费用选择。",
+    "scenario_max_count_M": 30,
+    "scenario_window_days": 30,
+    "soc_grid_kwh_delta": 6.0,
+    "value_nodes": [0, 6, 12, 18],
+    "tail": false,
+    "cap_iter": 4,
+    "random_seed": 20260912,
+    "horizon_note": "展望截断到当日 24:00（tail=false），四臂一致，报告中明确说明其代价。"
+  },
+  "arms": {
+    "A": {"price_env": "fixed", "purchase_adjust": false, "_label": "固定价 + 禁止普通购电调整（run_policy4 branch=42）"},
+    "B": {"price_env": "fixed", "purchase_adjust": true,  "_label": "固定价 + 允许节点调整（run_policy4 branch=43）"},
+    "C": {"price_env": "wavy",  "purchase_adjust": false, "_label": "波动价 + 禁止普通购电调整（run_policy4 branch=42）"},
+    "D": {"price_env": "wavy",  "purchase_adjust": true,  "_label": "波动价 + 允许节点调整（run_policy4 branch=43）"}
+  },
+  "fixed_price_curve": {
+    "source": "附件一 附件1.xlsx「电价」列（逐日重复的单日 144 点峰谷电价）",
+    "reader": "_comm4.ref_price144()",
+    "_rule": "固定价臂在规划、实时执行、结算三处均使用同一曲线；情景价 c 同步覆盖为固定曲线，故 nu 自动由固定价导出。"
+  },
+  "sampling_plan": {
+    "_rule": "先指定、后运行；不按结果增删日期。",
+    "spec_dates": ["2025-03-20", "2025-06-21", "2025-09-23", "2025-12-21"],
+    "relax_gap_worst_date": "2025-04-10",
+    "_relax_gap_note": "来自 07 的 A08：最差节点 2025-04-10, τ=6, H=108, 相对缺口 7.872%。",
+    "sensitivity_dates": ["2025-03-20", "2025-06-21", "2025-09-23", "2025-12-21", "2025-04-10"],
+    "contiguous_14d": {"start": "2025-06-15", "end": "2025-06-28", "days": 14},
+    "_contiguous_rule": "含指定日期 06-21 的一段连续 14 天；四臂各自连续递推，禁止逐日重置或抄正式组库存。"
+  },
+  "initial_state_policy": {
+    "source": "正式 4-2 全年回测（第四问_4-2全年回测.npz）的 E_chain",
+    "spec_day_replay": "每个指定日期独立重放，四臂共用该日的同一真实日初库存。",
+    "contiguous_14d": "四臂共用 2025-06-15 的真实日初库存，之后各自连续递推 14 天。"
+  },
+  "sensitivity_plan": {
+    "grid": {"baseline": 6.0, "finer": 3.0},
+    "scenario_count": {"baseline_M": 30, "larger_M": 50, "window_for_larger": 50,
+                       "_nesting": "legal_origins 由近及远，较大 M 的前 30 个 origin 与 M=30 完全一致（嵌套）。"},
+    "_scope": "只做单因素；除被测因素外其它条件不变；结论限定为所测日期的局部敏感性。"
+  },
+  "outputs": {
+    "dir": "模型结果/受控对照",
+    "report": "报告/第四问_受控对照与因果性检验报告.md"
+  },
+  "constraints": {
+    "no_git": true,
+    "no_overwrite_submit": true,
+    "single_process_only": true,
+    "scope": "只写 第四问最终版/"
+  }
+}

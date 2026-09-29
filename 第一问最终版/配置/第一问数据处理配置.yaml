@@ -1,0 +1,30 @@
+# 第一问数据处理配置（仅记录统一口径，本阶段不运行优化）
+input:
+  attachment1_path: "CUMCM2026Problems/C题/附件/附件1.xlsx"
+  attachment1_sha256: "66b87134f5ecccd68184d3539bb1293ef039f9e0fdd955a589b9bfa7f227c377"
+
+time:
+  interval_minutes: 10
+  delta_hours: 0.16666666666666666
+  periods_per_day: 144
+  timestamp_interpretation: "区间终点（标签表示该10分钟区间的结束时刻）"
+
+battery:
+  rated_capacity_kwh: 12000
+  min_energy_kwh: 1200
+  max_energy_kwh: 10800
+  initial_energy_kwh: 6000
+  terminal_energy_kwh: 6000
+  max_charge_power_kw: 5000
+  max_discharge_power_kw: 5000
+  charge_efficiency: 0.9
+  discharge_efficiency: 0.9
+  interval_charge_limit_kwh: 833.3333333333333
+  interval_discharge_limit_kwh: 833.3333333333333
+
+operation:
+  allow_grid_charging: true
+  allow_grid_export: false
+  allow_pv_curtailment: true
+  final_model_type: continuous_linear_programming
+  binary_charge_state_required: false

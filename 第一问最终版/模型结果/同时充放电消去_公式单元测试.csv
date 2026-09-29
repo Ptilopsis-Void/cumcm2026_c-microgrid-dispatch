@@ -1,0 +1,4 @@
+﻿test_name,input_g,input_C,input_D,input_U,epsilon,C_after,D_after,released_energy,g_after,U_after,energy_increment_before,energy_increment_after,balance_before,balance_after,cost_before,cost_after,cost_change,nonnegative_pass,energy_state_pass,balance_pass,cost_nonincrease_pass,one_action_zero_pass
+测试A_x小于g,200.0,100.0,100.0,0.0,100.0,0.0,19.0,18.999999999999993,181.0,0.0,-21.111111111111114,-21.11111111111111,0.0,0.0,100.0,90.5,-9.5,True,True,True,True,True
+测试B_x大于g,10.0,100.0,100.0,0.0,100.0,0.0,19.0,18.999999999999993,0.0,8.999999999999993,-21.111111111111114,-21.11111111111111,0.0,7.105427357601002e-15,5.0,0.0,-5.0,True,True,True,True,True
+测试C_g等于0,0.0,100.0,100.0,0.0,100.0,0.0,19.0,18.999999999999993,0.0,18.999999999999993,-21.111111111111114,-21.11111111111111,0.0,7.105427357601002e-15,0.0,0.0,0.0,True,True,True,True,True
